@@ -1,5 +1,4 @@
 'use client';
-
 export interface BangumiCalendarData {
   weekday: {
     en: string;
@@ -23,12 +22,20 @@ export interface BangumiCalendarData {
 }
 
 export async function GetBangumiCalendarData(): Promise<BangumiCalendarData[]> {
-  const response = await fetch('https://api.bgm.tv/calendar');
-  const data = await response.json();
-  const filteredData = data.map((item: BangumiCalendarData) => ({
-    ...item,
-    items: item.items.filter(bangumiItem => bangumiItem.images)
-  }));
-
-  return filteredData;
+  try {
+    const response = await fetch('/api/bangumi/calendar', {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) return [];
+    return data as BangumiCalendarData[];
+  } catch (error) {
+    console.error('Bangumi 日历请求失败:', error);
+    return [];
+  }
 }
