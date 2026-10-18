@@ -23,6 +23,10 @@ interface ConfigFileStruct {
     type: 'movie' | 'tv';
     query: string;
   }[];
+  iptv_sources?: {
+    name: string;
+    url: string;
+  }[];
 }
 
 export const API_CONFIG = {
@@ -48,6 +52,53 @@ export const API_CONFIG = {
 // 在模块加载时根据环境决定配置来源
 let fileConfig: ConfigFileStruct;
 let cachedConfig: AdminConfig;
+
+// 合并配置文件中的 iptv_sources 到 AdminConfig.IptvSources
+// 规则与 CustomCategories 一致：config 中的条目覆盖同名项，其余标记为 custom
+export function mergeIptvSources(adminConfig: AdminConfig): AdminConfig {
+  let fileCfg: ConfigFileStruct;
+  try {
+    fileCfg = JSON.parse(adminConfig.ConfigFile) as ConfigFileStruct;
+  } catch (e) {
+    fileCfg = {} as ConfigFileStruct;
+  }
+
+  if (!adminConfig.IptvSources) {
+    adminConfig.IptvSources = [];
+  }
+
+  const iptvSources = fileCfg.iptv_sources || [];
+  const iptvSourcesMap = new Map(
+    adminConfig.IptvSources.map((s) => [s.url, s])
+  );
+
+  iptvSources.forEach((source) => {
+    const existing = iptvSourcesMap.get(source.url);
+    if (existing) {
+      existing.name = source.name;
+      existing.url = source.url;
+      existing.from = 'config';
+      existing.disabled = false;
+    } else {
+      iptvSourcesMap.set(source.url, {
+        name: source.name,
+        url: source.url,
+        from: 'config',
+        disabled: false,
+      });
+    }
+  });
+
+  const iptvSourceKeys = new Set(iptvSources.map((s) => s.url));
+  iptvSourcesMap.forEach((source) => {
+    if (!iptvSourceKeys.has(source.url)) {
+      source.from = 'custom';
+    }
+  });
+
+  adminConfig.IptvSources = Array.from(iptvSourcesMap.values());
+  return adminConfig;
+}
 
 export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   try {
@@ -130,6 +181,9 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
 
   // 将 Map 转换回数组
   adminConfig.CustomCategories = Array.from(customCategoriesMap.values());
+
+  // 合并 iptv_sources
+  mergeIptvSources(adminConfig);
 
   // 同步 cache_time 到 SiteConfig.SiteInterfaceCacheTime
   if (fileConfig.cache_time !== undefined) {
@@ -454,6 +508,10 @@ export async function getConfig(): Promise<AdminConfig> {
     if (!adminConfig.CustomCategories) {
       adminConfig.CustomCategories = [];
     }
+    // 确保 IptvSources 被初始化
+    if (!adminConfig.IptvSources) {
+      adminConfig.IptvSources = [];
+    }
 
     // 数据库优先，环境变量仅在缺省时回退
     adminConfig.SiteConfig.SiteName =
@@ -602,6 +660,9 @@ export async function getConfig(): Promise<AdminConfig> {
 
     // 将 Map 转换回数组
     adminConfig.CustomCategories = Array.from(customCategoriesMap.values());
+
+    // 合并 iptv_sources
+    mergeIptvSources(adminConfig);
 
     // 同步 cache_time 到 SiteConfig.SiteInterfaceCacheTime
     if (fileConfig.cache_time !== undefined) {
@@ -809,6 +870,12 @@ export async function resetConfig() {
             disabled: false,
           })) || []
         : [],
+    IptvSources: (fileConfig.iptv_sources || []).map((source) => ({
+      name: source.name,
+      url: source.url,
+      from: 'config',
+      disabled: false,
+    })),
     SubscriptionConfig: {},
   } as AdminConfig;
 
@@ -824,6 +891,7 @@ export async function resetConfig() {
   cachedConfig.UserConfig = adminConfig.UserConfig;
   cachedConfig.SourceConfig = adminConfig.SourceConfig;
   cachedConfig.CustomCategories = adminConfig.CustomCategories || [];
+  cachedConfig.IptvSources = adminConfig.IptvSources || [];
   cachedConfig.SubscriptionConfig = adminConfig.SubscriptionConfig;
 }
 

@@ -42,11 +42,10 @@
       "api": "https://ikunzyapi.com/api.php/provide/vod/from/ikm3u8/"
     }
   },
-  "custom_category": [
+  "iptv_sources": [
     {
-      "name": "NBA",
-      "type": "movie",
-      "query": "NBA"
+      "name": "IPTV-org 中国",
+      "url": "https://iptv-org.github.io/iptv/countries/cn.m3u"
     }
   ]
 }
