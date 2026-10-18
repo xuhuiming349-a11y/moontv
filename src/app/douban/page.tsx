@@ -331,62 +331,22 @@ function DoubanPageClient() {
       let data: DoubanResult;
 
       if (isCustomPage) {
-        // 自定义分类：完全照搬站内搜索页（流式追加 + 按源响应顺序），
-        // 保证结果与直接搜索一致，不做任何二次排序。
-        // 用请求序号代替快照比较：只有最新请求能更新状态；
-        // 当前请求一定在 finally 里关掉 loading，不会卡骨架屏。
+        // 自定义分类：走站内搜索非流式接口，结果做与搜索页相同的聚合展示，
+        // 不做任何二次排序。非流式在自定义页已验证可用。
         const myRequestId = ++customRequestIdRef.current;
         try {
           const params = new URLSearchParams({
             q: customSecondary,
-            stream: '1',
+            stream: '0',
             timeout: '20',
           });
           const resp = await fetch(`/api/search?${params.toString()}`);
-          if (!resp.body) throw new Error('empty body');
-          const reader = resp.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-          let firstBatch = true;
-          const collected: SearchResult[] = [];
-          for (;;) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            if (myRequestId !== customRequestIdRef.current) {
-              // 已有更新的请求，接管后续更新，本次直接退出
-              reader.cancel().catch(() => {});
-              return;
-            }
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              try {
-                const json = JSON.parse(line);
-                if (json.pageResults?.length) {
-                  collected.push(...json.pageResults);
-                  if (myRequestId !== customRequestIdRef.current) {
-                    reader.cancel().catch(() => {});
-                    return;
-                  }
-                  setCustomSearchResults([...collected]);
-                  if (firstBatch) {
-                    setDoubanData([]);
-                    setLoading(false);
-                    firstBatch = false;
-                  }
-                }
-              } catch {
-                // 忽略坏行
-              }
-            }
-          }
-          if (myRequestId === customRequestIdRef.current) {
-            setCustomSearchResults([...collected]);
-            setDoubanData([]);
-            setHasMore(false);
-          }
+          const json = await resp.json();
+          if (myRequestId !== customRequestIdRef.current) return;
+          const results: SearchResult[] = json.results || [];
+          setCustomSearchResults(results);
+          setDoubanData([]);
+          setHasMore(false);
         } catch (err) {
           console.error(err);
         } finally {
