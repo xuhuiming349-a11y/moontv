@@ -6,6 +6,7 @@ import { memo, useEffect, useState } from 'react';
 
 import { BackButton } from './BackButton';
 import { useSite } from './SiteProvider';
+import SiteNameWatermark from './SiteNameWatermark';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 
@@ -76,9 +77,12 @@ const MobileHeader = ({ showBackButton = false }: MobileHeaderProps) => {
           {showBackButton && <BackButton />}
           <Link
             href='/'
-            className='text-xl font-bold text-green-600 tracking-tight hover:opacity-80 transition-opacity'
+            className='relative hover:opacity-80 transition-opacity'
           >
-            {siteName}
+            <SiteNameWatermark className='w-36' />
+            <span className='relative z-10 text-xl font-bold text-green-600 tracking-tight'>
+              {siteName}
+            </span>
           </Link>
         </div>
 

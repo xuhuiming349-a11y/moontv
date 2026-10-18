@@ -10,7 +10,6 @@ import { getConfig } from '@/lib/config';
 import { getDefaultPlaybackSaveInterval } from '@/lib/playback-settings';
 
 import ConditionalNav from '../components/ConditionalNav';
-import CornerWatermark from '../components/CornerWatermark';
 import GlobalDownloadManager from '../components/GlobalDownloadManager';
 import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
 import { NavigationLoadingIndicator } from '../components/NavigationLoadingIndicator';
@@ -163,8 +162,6 @@ export default async function RootLayout({
               
               <GlobalErrorIndicator />
               {autoUpdateEnabled && <SubscriptionAutoUpdate />}
-              {/* 右下角人物水印（半透明，沉底） */}
-              <CornerWatermark />
             </SiteProvider>
           </NavigationLoadingProvider>
         </ThemeProvider>

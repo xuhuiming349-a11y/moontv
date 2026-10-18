@@ -16,6 +16,7 @@ import {
 import { useNavigationLoading } from './NavigationLoadingProvider';
 import SearchSuggestions from './SearchSuggestions';
 import { useSite } from './SiteProvider';
+import SiteNameWatermark from './SiteNameWatermark';
 import SourceSelector from './SourceSelector';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
@@ -297,19 +298,21 @@ const TopNav = ({ activePath }: TopNavProps) => {
             <div className='absolute left-1/2 transform -translate-x-1/2'>
               <Link
                 href='/'
-                className='flex items-center justify-center select-none hover:opacity-80 transition-opacity duration-200'
+                className='relative flex items-center justify-center select-none hover:opacity-80 transition-opacity duration-200'
                 onClick={() => { if (active !== '/') startLoading(); }}
               >
-                <span className='top-nav__logo font-bold text-green-600 tracking-tight'>{siteName}</span>
+                <SiteNameWatermark className='w-36' />
+                <span className='relative z-10 top-nav__logo font-bold text-green-600 tracking-tight'>{siteName}</span>
               </Link>
             </div>
           ) : (
             <Link
               href='/'
-              className='flex items-center justify-center select-none hover:opacity-80 transition-opacity duration-200 flex-shrink-0'
+              className='relative flex items-center justify-center select-none hover:opacity-80 transition-opacity duration-200 flex-shrink-0'
               onClick={() => { if (active !== '/') startLoading(); }}
             >
-              <span className='top-nav__logo font-bold text-green-600 tracking-tight'>{siteName}</span>
+              <SiteNameWatermark className='w-36' />
+              <span className='relative z-10 top-nav__logo font-bold text-green-600 tracking-tight'>{siteName}</span>
             </Link>
           )}
           <nav className='flex items-center gap-1 flex-shrink-0'>
