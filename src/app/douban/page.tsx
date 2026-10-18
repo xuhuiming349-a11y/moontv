@@ -9,11 +9,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
 import {
   getDoubanCategories,
+  getDoubanList,
   getDoubanRecommends,
 } from '@/lib/douban.client';
+import { getCustomCategories } from '@/lib/config.client';
 import { DoubanItem, DoubanResult } from '@/lib/types';
 
 import DoubanCardSkeleton from '@/components/DoubanCardSkeleton';
+import DoubanCustomSelector from '@/components/DoubanCustomSelector';
 import DoubanSelector from '@/components/DoubanSelector';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
@@ -38,12 +41,16 @@ function DoubanPageClient() {
     multiLevelSelection: {} as Record<string, string>,
     selectedWeekday: '',
     currentPage: 0,
+    customPrimary: '',
+    customSecondary: '',
   });
 
   const type = searchParams.get('type') || 'movie';
 
   // 标签页（短剧/纪录片）：豆瓣 rexxar「类型=固定标签」+ 排序，结构与彼此一致
   const isTagPage = type === 'short' || type === 'doc';
+  // 自定义分类页：展示 config.json / 管理面板中配置的 custom_category
+  const isCustomPage = type === 'custom';
   const TAG_PAGE_CATEGORY: Record<'short' | 'doc', string> = {
     short: '短剧',
     doc: '纪录片',
@@ -79,6 +86,13 @@ function DoubanPageClient() {
   // 星期选择器状态
   const [selectedWeekday, setSelectedWeekday] = useState<string>('');
 
+  // 自定义分类状态（type=custom 时使用）
+  const [customCategories, setCustomCategories] = useState<
+    { name: string; type: 'movie' | 'tv'; query: string }[]
+  >([]);
+  const [customPrimary, setCustomPrimary] = useState<string>('');
+  const [customSecondary, setCustomSecondary] = useState<string>('');
+
   // 同步最新参数值到 ref
   useEffect(() => {
     currentParamsRef.current = {
@@ -88,6 +102,8 @@ function DoubanPageClient() {
       multiLevelSelection: multiLevelValues,
       selectedWeekday,
       currentPage,
+      customPrimary,
+      customSecondary,
     };
   }, [
     type,
@@ -96,6 +112,8 @@ function DoubanPageClient() {
     multiLevelValues,
     selectedWeekday,
     currentPage,
+    customPrimary,
+    customSecondary,
   ]);
 
   // 初始化时标记选择器为准备好状态
@@ -154,6 +172,31 @@ function DoubanPageClient() {
     return () => clearTimeout(timer);
   }, [type, isTagPage]);
 
+  // 自定义分类页：加载 custom_category 配置
+  useEffect(() => {
+    if (!isCustomPage) return;
+    let cancelled = false;
+    getCustomCategories()
+      .then((cats) => {
+        if (cancelled) return;
+        setCustomCategories(cats);
+        if (cats.length > 0) {
+          const firstType = cats.some((c) => c.type === 'movie')
+            ? 'movie'
+            : cats[0].type;
+          setCustomPrimary(firstType);
+          const first = cats.find((c) => c.type === firstType) ?? cats[0];
+          setCustomSecondary(first.query);
+        }
+      })
+      .catch(() => {
+        // 加载失败时保持空列表，页面显示空状态
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCustomPage]);
+
   // 生成骨架屏数据
   const skeletonData = Array.from({ length: 25 }, (_, index) => index);
 
@@ -167,6 +210,8 @@ function DoubanPageClient() {
         multiLevelSelection: Record<string, string>;
         selectedWeekday: string;
         currentPage: number;
+        customPrimary: string;
+        customSecondary: string;
       },
       snapshot2: {
         type: string;
@@ -175,6 +220,8 @@ function DoubanPageClient() {
         multiLevelSelection: Record<string, string>;
         selectedWeekday: string;
         currentPage: number;
+        customPrimary: string;
+        customSecondary: string;
       }
     ) => {
       return (
@@ -183,6 +230,8 @@ function DoubanPageClient() {
         snapshot1.secondarySelection === snapshot2.secondarySelection &&
         snapshot1.selectedWeekday === snapshot2.selectedWeekday &&
         snapshot1.currentPage === snapshot2.currentPage &&
+        snapshot1.customPrimary === snapshot2.customPrimary &&
+        snapshot1.customSecondary === snapshot2.customSecondary &&
         JSON.stringify(snapshot1.multiLevelSelection) ===
         JSON.stringify(snapshot2.multiLevelSelection)
       );
@@ -246,6 +295,11 @@ function DoubanPageClient() {
 
   // 防抖的数据加载函数
   const loadInitialData = useCallback(async () => {
+    // 自定义分类页：配置尚未加载完成时等待
+    if (isCustomPage && !customSecondary) {
+      return;
+    }
+
     // 创建当前参数的快照
     const requestSnapshot = {
       type,
@@ -254,6 +308,8 @@ function DoubanPageClient() {
       multiLevelSelection: multiLevelValues,
       selectedWeekday,
       currentPage: 0,
+      customPrimary,
+      customSecondary,
     };
 
     try {
@@ -266,7 +322,15 @@ function DoubanPageClient() {
 
       let data: DoubanResult;
 
-      if (isTagPage) {
+      if (isCustomPage) {
+        // 自定义分类：用 query 作为豆瓣标签搜索
+        data = await getDoubanList({
+          tag: customSecondary,
+          type: customPrimary,
+          pageLimit: 25,
+          pageStart: 0,
+        });
+      } else if (isTagPage) {
         // 标签页（短剧/纪录片）：豆瓣 rexxar「类型=固定标签」
         data = await getTagPageData(0);
       } else if (type === 'anime' && primarySelection === '每日放送') {
@@ -366,6 +430,9 @@ function DoubanPageClient() {
     selectedWeekday,
     getRequestParams,
     getTagPageData,
+    isCustomPage,
+    customPrimary,
+    customSecondary,
   ]);
 
   // 只在选择器准备好后才加载数据
@@ -413,13 +480,23 @@ function DoubanPageClient() {
           multiLevelSelection: multiLevelValues,
           selectedWeekday,
           currentPage,
+          customPrimary,
+          customSecondary,
         };
 
         try {
           setIsLoadingMore(true);
 
           let data: DoubanResult;
-          if (isTagPage) {
+          if (isCustomPage) {
+            // 自定义分类：用 query 作为豆瓣标签搜索
+            data = await getDoubanList({
+              tag: customSecondary,
+              type: customPrimary,
+              pageLimit: 25,
+              pageStart: currentPage * 25,
+            });
+          } else if (isTagPage) {
             // 标签页（短剧/纪录片）
             data = await getTagPageData(currentPage * 25);
           } else if (type === 'anime' && primarySelection === '每日放送') {
@@ -516,6 +593,9 @@ function DoubanPageClient() {
     multiLevelValues,
     selectedWeekday,
     getTagPageData,
+    isCustomPage,
+    customPrimary,
+    customSecondary,
   ]);
 
   // 设置滚动监听
@@ -638,6 +718,41 @@ function DoubanPageClient() {
     setSelectedWeekday(weekday);
   }, []);
 
+  // 自定义分类：一级（电影/剧集）切换
+  const handleCustomPrimaryChange = useCallback(
+    (value: string) => {
+      if (value !== customPrimary) {
+        setLoading(true);
+        // 立即重置页面状态，防止基于旧状态的请求
+        setCurrentPage(0);
+        setDoubanData([]);
+        setHasMore(true);
+        setIsLoadingMore(false);
+        setCustomPrimary(value);
+        // 切换类型时默认选中该类型下的第一个分类
+        const first = customCategories.find((c) => c.type === value);
+        if (first) setCustomSecondary(first.query);
+      }
+    },
+    [customPrimary, customCategories]
+  );
+
+  // 自定义分类：二级（具体分类）切换
+  const handleCustomSecondaryChange = useCallback(
+    (value: string) => {
+      if (value !== customSecondary) {
+        setLoading(true);
+        // 立即重置页面状态，防止基于旧状态的请求
+        setCurrentPage(0);
+        setDoubanData([]);
+        setHasMore(true);
+        setIsLoadingMore(false);
+        setCustomSecondary(value);
+      }
+    },
+    [customSecondary]
+  );
+
   const getPageTitle = () => {
     // 根据 type 生成标题
     return type === 'movie'
@@ -664,6 +779,9 @@ function DoubanPageClient() {
     }
     if (type === 'doc') {
       return '来自豆瓣的精选纪录片内容';
+    }
+    if (isCustomPage) {
+      return '来自豆瓣的自定义分类内容';
     }
     return '来自豆瓣的精选内容';
   };
@@ -694,17 +812,27 @@ function DoubanPageClient() {
 
           {/* 选择器组件 */}
           <div className='bg-white/60 dark:bg-gray-800/40 rounded-2xl p-4 sm:p-6 border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm'>
-            <DoubanSelector
-              type={
-                type as 'movie' | 'tv' | 'show' | 'anime' | 'short' | 'doc'
-              }
-              primarySelection={primarySelection}
-              secondarySelection={secondarySelection}
-              onPrimaryChange={handlePrimaryChange}
-              onSecondaryChange={handleSecondaryChange}
-              onMultiLevelChange={handleMultiLevelChange}
-              onWeekdayChange={handleWeekdayChange}
-            />
+            {isCustomPage ? (
+              <DoubanCustomSelector
+                customCategories={customCategories}
+                primarySelection={customPrimary}
+                secondarySelection={customSecondary}
+                onPrimaryChange={handleCustomPrimaryChange}
+                onSecondaryChange={handleCustomSecondaryChange}
+              />
+            ) : (
+              <DoubanSelector
+                type={
+                  type as 'movie' | 'tv' | 'show' | 'anime' | 'short' | 'doc'
+                }
+                primarySelection={primarySelection}
+                secondarySelection={secondarySelection}
+                onPrimaryChange={handlePrimaryChange}
+                onSecondaryChange={handleSecondaryChange}
+                onMultiLevelChange={handleMultiLevelChange}
+                onWeekdayChange={handleWeekdayChange}
+              />
+            )}
           </div>
         </div>
 
@@ -725,7 +853,15 @@ function DoubanPageClient() {
                     douban_id={Number(item.id)}
                     rate={item.rate}
                     year={item.year}
-                    type={type === 'movie' ? 'movie' : ''} // 电影类型严格控制，tv 不控
+                    type={
+                      isCustomPage
+                        ? customPrimary === 'movie'
+                          ? 'movie'
+                          : ''
+                        : type === 'movie'
+                          ? 'movie'
+                          : ''
+                    } // 电影类型严格控制，tv 不控
                     isBangumi={
                       type === 'anime' && primarySelection === '每日放送'
                     }

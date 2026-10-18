@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { Cat, Clapperboard, Clover, Compass, Download, Film, History, Home, Search, Trash2, Trophy, Tv, X } from 'lucide-react';
+import { Cat, Clapperboard, Clover, Compass, Download, Film, History, Home, LayoutGrid, Search, Trash2, Trophy, Tv, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { memo, useEffect, useRef, useState } from 'react';
@@ -100,6 +100,7 @@ const TopNav = ({ activePath }: TopNavProps) => {
     { icon: Compass,      label: '纪录片', href: '/douban?type=doc' },
     { icon: Cat,          label: '动漫',   href: '/douban?type=anime' },
     { icon: Clover,       label: '综艺',   href: '/douban?type=show' },
+    { icon: LayoutGrid,   label: '自定义', href: '/douban?type=custom' },
     { icon: Trophy,       label: '榜单',   href: '/ranking' },
   ];
   const handleSearch = (e: React.FormEvent) => {
