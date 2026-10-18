@@ -6,7 +6,7 @@ export default function CornerWatermark() {
   return (
     <div
       aria-hidden
-      className='pointer-events-none select-none fixed z-40 bottom-24 right-3 md:bottom-8 md:right-8 opacity-90'
+      className='pointer-events-none select-none fixed -z-10 bottom-24 right-3 md:bottom-8 md:right-8 opacity-40'
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
