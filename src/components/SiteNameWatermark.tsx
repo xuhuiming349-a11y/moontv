@@ -9,7 +9,7 @@ export default function SiteNameWatermark({ className = 'w-36' }: { className?: 
       alt=''
       draggable={false}
       aria-hidden
-      className={`pointer-events-none select-none absolute left-0 top-1/2 -translate-y-1/2 opacity-70 ${className}`}
+      className={`pointer-events-none select-none absolute left-0 top-[62%] -translate-y-1/2 opacity-70 ${className}`}
     />
   );
 }
