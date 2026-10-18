@@ -96,6 +96,26 @@ export function mergeIptvSources(adminConfig: AdminConfig): AdminConfig {
     }
   });
 
+  // 兜底：数据库里的 ConfigFile 快照可能是旧的（没有 iptv_sources），
+  // 用构建时内嵌的 config.json 补充缺失的默认源；只补充不覆盖，
+  // 不动用户已有的启用/停用状态
+  try {
+    const buildSources =
+      (runtimeConfig as unknown as ConfigFileStruct)?.iptv_sources || [];
+    buildSources.forEach((source) => {
+      if (source?.url && !iptvSourcesMap.has(source.url)) {
+        iptvSourcesMap.set(source.url, {
+          name: source.name,
+          url: source.url,
+          from: 'config',
+          disabled: false,
+        });
+      }
+    });
+  } catch {
+    /* 忽略 */
+  }
+
   adminConfig.IptvSources = Array.from(iptvSourcesMap.values());
   return adminConfig;
 }
@@ -521,10 +541,8 @@ export async function getConfig(): Promise<AdminConfig> {
     if (!adminConfig.CustomCategories) {
       adminConfig.CustomCategories = [];
     }
-    // 确保 IptvSources 被初始化
-    if (!adminConfig.IptvSources) {
-      adminConfig.IptvSources = [];
-    }
+    // 合并直播源：含构建时内嵌 config.json 的默认源兜底
+    mergeIptvSources(adminConfig);
 
     // 数据库优先，环境变量仅在缺省时回退
     adminConfig.SiteConfig.SiteName =

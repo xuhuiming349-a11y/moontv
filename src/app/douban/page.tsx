@@ -13,7 +13,7 @@ import {
   getDoubanRecommends,
 } from '@/lib/douban.client';
 import { getCustomCategories } from '@/lib/config.client';
-import { DoubanItem, DoubanResult } from '@/lib/types';
+import { DoubanItem, DoubanResult, SearchResult } from '@/lib/types';
 
 import DoubanCardSkeleton from '@/components/DoubanCardSkeleton';
 import DoubanCustomSelector from '@/components/DoubanCustomSelector';
@@ -92,6 +92,10 @@ function DoubanPageClient() {
   >([]);
   const [customPrimary, setCustomPrimary] = useState<string>('');
   const [customSecondary, setCustomSecondary] = useState<string>('');
+  // 自定义分类页的站内搜索结果（type=custom 时使用，不再走豆瓣）
+  const [customSearchResults, setCustomSearchResults] = useState<SearchResult[]>(
+    []
+  );
 
   // 同步最新参数值到 ref
   useEffect(() => {
@@ -323,14 +327,27 @@ function DoubanPageClient() {
       let data: DoubanResult;
 
       if (isCustomPage) {
-        // 自定义分类：用 query 作为豆瓣标签搜索
-        data = await getDoubanList({
-          tag: customSecondary,
-          type: customPrimary,
-          pageLimit: 25,
-          pageStart: 0,
-        });
-      } else if (isTagPage) {
+        // 自定义分类：用 query 作为站内搜索关键字，走 MoonTV 视频源搜索
+        try {
+          const resp = await fetch(
+            `/api/search?q=${encodeURIComponent(customSecondary)}&stream=0`
+          );
+          const json = await resp.json();
+          const currentSnapshot = { ...currentParamsRef.current };
+          if (isSnapshotEqual(requestSnapshot, currentSnapshot)) {
+            setCustomSearchResults(json.results || []);
+            setDoubanData([]);
+            setHasMore(false);
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error(err);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (isTagPage) {
         // 标签页（短剧/纪录片）：豆瓣 rexxar「类型=固定标签」
         data = await getTagPageData(0);
       } else if (type === 'anime' && primarySelection === '每日放送') {
@@ -487,16 +504,14 @@ function DoubanPageClient() {
         try {
           setIsLoadingMore(true);
 
-          let data: DoubanResult;
+          // 自定义分类页走站内搜索一次性返回，无分页
           if (isCustomPage) {
-            // 自定义分类：用 query 作为豆瓣标签搜索
-            data = await getDoubanList({
-              tag: customSecondary,
-              type: customPrimary,
-              pageLimit: 25,
-              pageStart: currentPage * 25,
-            });
-          } else if (isTagPage) {
+            setIsLoadingMore(false);
+            return;
+          }
+
+          let data: DoubanResult;
+          if (isTagPage) {
             // 标签页（短剧/纪录片）
             data = await getTagPageData(currentPage * 25);
           } else if (type === 'anime' && primarySelection === '每日放送') {
@@ -844,7 +859,37 @@ function DoubanPageClient() {
               ? // 显示骨架屏
               skeletonData.map((index) => <DoubanCardSkeleton key={index} />)
               : // 显示实际数据
-              doubanData.map((item, index) => (
+              isCustomPage
+              ? // 自定义分类页：展示站内搜索结果
+                customSearchResults.map((item, index) => (
+                  <div
+                    key={`${item.source}-${item.id}-${index}`}
+                    className='w-full'
+                  >
+                    <VideoCard
+                      from='search'
+                      id={item.id}
+                      title={item.title || ''}
+                      poster={item.poster}
+                      episodes={item.episodes ? item.episodes.length : 0}
+                      source={item.source}
+                      source_name={item.source_name}
+                      douban_id={item.douban_id}
+                      query={
+                        customSecondary.trim() !== item.title
+                          ? customSecondary.trim()
+                          : ''
+                      }
+                      year={item.year}
+                      type={
+                        item.episodes && item.episodes.length > 1
+                          ? 'tv'
+                          : 'movie'
+                      }
+                    />
+                  </div>
+                ))
+              : doubanData.map((item, index) => (
                 <div key={`${item.title}-${index}`} className='w-full'>
                   <VideoCard
                     from='douban'
@@ -897,7 +942,8 @@ function DoubanPageClient() {
           )}
 
           {/* 空状态 */}
-          {!loading && doubanData.length === 0 && (
+          {!loading &&
+            (isCustomPage ? customSearchResults.length === 0 : doubanData.length === 0) && (
             <div className='text-center text-gray-500 py-8'>暂无相关内容</div>
           )}
         </div>
