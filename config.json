@@ -41,5 +41,12 @@
       "name": "IK",
       "api": "https://ikunzyapi.com/api.php/provide/vod/from/ikm3u8/"
     }
-  }
+  },
+  "custom_category": [
+    {
+      "name": "NBA",
+      "type": "movie",
+      "query": "NBA"
+    }
+  ]
 }
