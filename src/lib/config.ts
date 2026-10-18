@@ -417,6 +417,12 @@ async function initConfig() {
             from: 'config',
             disabled: false,
           })),
+          IptvSources: (fileConfig.iptv_sources || []).map((source) => ({
+            name: source.name,
+            url: source.url,
+            from: 'config',
+            disabled: false,
+          })),
           SubscriptionConfig: {},
         };
       }
@@ -481,6 +487,13 @@ async function initConfig() {
           name: category.name,
           type: category.type,
           query: category.query,
+          from: 'config',
+          disabled: false,
+        })) || [],
+      IptvSources:
+        fileConfig.iptv_sources?.map((source) => ({
+          name: source.name,
+          url: source.url,
           from: 'config',
           disabled: false,
         })) || [],

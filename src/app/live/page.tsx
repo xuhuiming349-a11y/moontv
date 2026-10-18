@@ -24,7 +24,7 @@ interface ChannelGroup {
 }
 
 /** 轻量直播播放器：ArtPlayer + hls.js */
-function LivePlayer({ url, title }: { url: string; title: string }) {
+function LivePlayer({ url }: { url: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const artRef = useRef<any>(null);
 
@@ -32,8 +32,7 @@ function LivePlayer({ url, title }: { url: string; title: string }) {
     let mounted = true;
     let art: any = null;
 
-    (async () => {
-      try {
+    (async () => {      try {
         const [{ default: Artplayer }, { default: Hls }] = await Promise.all([
           import('artplayer'),
           import('hls.js'),
@@ -43,7 +42,6 @@ function LivePlayer({ url, title }: { url: string; title: string }) {
         art = new Artplayer({
           container: containerRef.current,
           url,
-          title,
           type: 'm3u8',
           autoplay: true,
           muted: false,
@@ -99,16 +97,6 @@ function LivePlayer({ url, title }: { url: string; title: string }) {
       }
     };
   }, [url]);
-
-  useEffect(() => {
-    if (artRef.current && title) {
-      try {
-        artRef.current.title = title;
-      } catch {
-        /* 忽略 */
-      }
-    }
-  }, [title]);
 
   return <div ref={containerRef} className='w-full aspect-video bg-black rounded-xl overflow-hidden' />;
 }
@@ -221,7 +209,6 @@ function LivePageClient() {
                   <LivePlayer
                     key={activeChannel.url}
                     url={activeChannel.url}
-                    title={activeChannel.name}
                   />
                   <div className='mt-3 flex items-center gap-2'>
                     <span className='inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'>
