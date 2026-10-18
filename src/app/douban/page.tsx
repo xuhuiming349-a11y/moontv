@@ -336,10 +336,18 @@ function DoubanPageClient() {
           const currentSnapshot = { ...currentParamsRef.current };
           if (isSnapshotEqual(requestSnapshot, currentSnapshot)) {
             const results: SearchResult[] = json.results || [];
-            // 按年份从新到旧排序，年份缺失的排最后
-            results.sort(
-              (a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0)
-            );
+            // 优先按标题中的比赛日期（YYYYMMDD，如 20260614）从新到旧排序，
+            // 没有日期的按年份排之后，年份也没有的排最后
+            const dateKey = (r: SearchResult): number => {
+              const m = (r.title || '').match(/(\d{8})/);
+              if (m) {
+                const n = parseInt(m[1], 10);
+                if (n >= 20000101 && n <= 20301231) return n;
+              }
+              const y = parseInt(r.year) || 0;
+              return y > 0 ? y * 10000 : 0;
+            };
+            results.sort((a, b) => dateKey(b) - dateKey(a));
             setCustomSearchResults(results);
             setDoubanData([]);
             setHasMore(false);
