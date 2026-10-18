@@ -4,7 +4,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { GetBangumiCalendarData } from '@/lib/bangumi.client';
 import {
@@ -327,28 +327,53 @@ function DoubanPageClient() {
       let data: DoubanResult;
 
       if (isCustomPage) {
-        // 自定义分类：用 query 作为站内搜索关键字，走 MoonTV 视频源搜索
+        // 自定义分类：完全照搬站内搜索页（流式追加 + 按源响应顺序），
+        // 保证结果与直接搜索一致，不做任何二次排序
         try {
-          const resp = await fetch(
-            `/api/search?q=${encodeURIComponent(customSecondary)}&stream=0`
-          );
-          const json = await resp.json();
+          const params = new URLSearchParams({
+            q: customSecondary,
+            stream: '1',
+          });
+          const resp = await fetch(`/api/search?${params.toString()}`);
+          if (!resp.body) throw new Error('empty body');
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let firstBatch = true;
+          const collected: SearchResult[] = [];
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const json = JSON.parse(line);
+                if (json.pageResults?.length) {
+                  collected.push(...json.pageResults);
+                  const currentSnapshot = { ...currentParamsRef.current };
+                  if (!isSnapshotEqual(requestSnapshot, currentSnapshot)) {
+                    // 参数已变化，丢弃本次加载
+                    reader.cancel().catch(() => {});
+                    return;
+                  }
+                  setCustomSearchResults([...collected]);
+                  if (firstBatch) {
+                    setDoubanData([]);
+                    setLoading(false);
+                    firstBatch = false;
+                  }
+                }
+              } catch {
+                // 忽略坏行
+              }
+            }
+          }
           const currentSnapshot = { ...currentParamsRef.current };
           if (isSnapshotEqual(requestSnapshot, currentSnapshot)) {
-            const results: SearchResult[] = json.results || [];
-            // 优先按标题中的比赛日期（YYYYMMDD，如 20260614）从新到旧排序，
-            // 没有日期的按年份排之后，年份也没有的排最后
-            const dateKey = (r: SearchResult): number => {
-              const m = (r.title || '').match(/(\d{8})/);
-              if (m) {
-                const n = parseInt(m[1], 10);
-                if (n >= 20000101 && n <= 20301231) return n;
-              }
-              const y = parseInt(r.year) || 0;
-              return y > 0 ? y * 10000 : 0;
-            };
-            results.sort((a, b) => dateKey(b) - dateKey(a));
-            setCustomSearchResults(results);
+            setCustomSearchResults([...collected]);
             setDoubanData([]);
             setHasMore(false);
             setLoading(false);
@@ -781,6 +806,33 @@ function DoubanPageClient() {
     [customSecondary]
   );
 
+  // 自定义分类页：聚合搜索结果（照搬搜索页逻辑，保证与直接搜索一致）
+  const customGroups = useMemo<[string, SearchResult[]][]>(() => {
+    const map = new Map<string, SearchResult[]>();
+    customSearchResults.forEach((item) => {
+      const normalizedTitle = item.title.trim().replace(/\s+/g, ' ');
+      const key = `${normalizedTitle}-${item.year || 'unknown'}-${
+        item.episodes.length === 1 ? 'movie' : 'tv'
+      }`;
+      const arr = map.get(key) || [];
+      arr.push(item);
+      map.set(key, arr);
+    });
+    return Array.from(map.entries()).sort((a, b) => {
+      const q = customSecondary.trim().toLowerCase();
+      const aExactMatch = a[1][0].title.toLowerCase().includes(q);
+      const bExactMatch = b[1][0].title.toLowerCase().includes(q);
+      if (aExactMatch && !bExactMatch) return -1;
+      if (!aExactMatch && bExactMatch) return 1;
+      const aYear = a[1][0].year;
+      const bYear = b[1][0].year;
+      if (aYear === bYear) return a[1][0].title.localeCompare(b[1][0].title);
+      if (aYear === 'unknown') return 1;
+      if (bYear === 'unknown') return 1;
+      return aYear > bYear ? -1 : 1;
+    });
+  }, [customSearchResults, customSecondary]);
+
   const getPageTitle = () => {
     // 根据 type 生成标题
     return type === 'movie'
@@ -873,31 +925,16 @@ function DoubanPageClient() {
               skeletonData.map((index) => <DoubanCardSkeleton key={index} />)
               : // 显示实际数据
               isCustomPage
-              ? // 自定义分类页：展示站内搜索结果
-                customSearchResults.map((item, index) => (
-                  <div
-                    key={`${item.source}-${item.id}-${index}`}
-                    className='w-full'
-                  >
+              ? // 自定义分类页：聚合展示（与直接搜索一致）
+                customGroups.map(([mapKey, group], index) => (
+                  <div key={`custom-${mapKey}-${index}`} className='w-full'>
                     <VideoCard
                       from='search'
-                      id={item.id}
-                      title={item.title || ''}
-                      poster={item.poster}
-                      episodes={item.episodes ? item.episodes.length : 0}
-                      source={item.source}
-                      source_name={item.source_name}
-                      douban_id={item.douban_id}
+                      items={group}
                       query={
-                        customSecondary.trim() !== item.title
+                        customSecondary.trim() !== group[0].title
                           ? customSecondary.trim()
                           : ''
-                      }
-                      year={item.year}
-                      type={
-                        item.episodes && item.episodes.length > 1
-                          ? 'tv'
-                          : 'movie'
                       }
                     />
                   </div>
