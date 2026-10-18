@@ -97,9 +97,6 @@ function DoubanPageClient() {
     []
   );
 
-  // 自定义分类页的请求序号：只有最新的请求能更新状态，
-  // 旧请求直接退出，避免快照竞态导致 loading 永远关不掉
-  const customRequestIdRef = useRef(0);
 
   // 同步最新参数值到 ref
   useEffect(() => {
@@ -332,27 +329,24 @@ function DoubanPageClient() {
 
       if (isCustomPage) {
         // 自定义分类：走站内搜索非流式接口，结果做与搜索页相同的聚合展示，
-        // 不做任何二次排序。非流式在自定义页已验证可用。
-        const myRequestId = ++customRequestIdRef.current;
+        // 不做任何二次排序（之前验证可用的写法）。
         try {
-          const params = new URLSearchParams({
-            q: customSecondary,
-            stream: '0',
-            timeout: '20',
-          });
-          const resp = await fetch(`/api/search?${params.toString()}`);
+          const resp = await fetch(
+            `/api/search?q=${encodeURIComponent(customSecondary)}&stream=0`
+          );
           const json = await resp.json();
-          if (myRequestId !== customRequestIdRef.current) return;
-          const results: SearchResult[] = json.results || [];
-          setCustomSearchResults(results);
-          setDoubanData([]);
-          setHasMore(false);
+          const currentSnapshot = { ...currentParamsRef.current };
+          if (isSnapshotEqual(requestSnapshot, currentSnapshot)) {
+            const results: SearchResult[] = json.results || [];
+            setCustomSearchResults(results);
+            setDoubanData([]);
+            setHasMore(false);
+          }
         } catch (err) {
           console.error(err);
         } finally {
-          if (myRequestId === customRequestIdRef.current) {
-            setLoading(false);
-          }
+          // 无论快照是否匹配都关掉 loading，避免卡骨架屏
+          setLoading(false);
         }
         return;
       }
