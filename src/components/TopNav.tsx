@@ -15,7 +15,7 @@ import {
 
 import { useNavigationLoading } from './NavigationLoadingProvider';
 import SearchSuggestions from './SearchSuggestions';
-import { useSite } from './SiteProvider';
+import SiteLogo from './SiteLogo';
 import SourceSelector from './SourceSelector';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
@@ -26,7 +26,6 @@ const TopNav = ({ activePath }: TopNavProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { siteName } = useSite();
   const { startLoading } = useNavigationLoading();
   const [active, setActive] = useState(activePath || '/');
   const [searchQuery, setSearchQuery] = useState('');
@@ -300,7 +299,7 @@ const TopNav = ({ activePath }: TopNavProps) => {
                 className='flex items-center justify-center select-none hover:opacity-80 transition-opacity duration-200'
                 onClick={() => { if (active !== '/') startLoading(); }}
               >
-                <span className='top-nav__logo font-bold text-green-600 tracking-tight'>{siteName}</span>
+                <SiteLogo className='h-9 w-auto' />
               </Link>
             </div>
           ) : (
@@ -309,7 +308,7 @@ const TopNav = ({ activePath }: TopNavProps) => {
               className='flex items-center justify-center select-none hover:opacity-80 transition-opacity duration-200 flex-shrink-0'
               onClick={() => { if (active !== '/') startLoading(); }}
             >
-              <span className='top-nav__logo font-bold text-green-600 tracking-tight'>{siteName}</span>
+              <SiteLogo className='h-9 w-auto' />
             </Link>
           )}
           <nav className='flex items-center gap-1 flex-shrink-0'>

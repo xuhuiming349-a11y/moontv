@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { memo, useEffect, useState } from 'react';
 
 import { BackButton } from './BackButton';
-import { useSite } from './SiteProvider';
+import SiteLogo from './SiteLogo';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 
@@ -14,7 +14,6 @@ interface MobileHeaderProps {
 }
 
 const MobileHeader = ({ showBackButton = false }: MobileHeaderProps) => {
-  const { siteName } = useSite();
   
   // 下载任务数量统计
   const [downloadTaskCount, setDownloadTaskCount] = useState(0);
@@ -76,9 +75,9 @@ const MobileHeader = ({ showBackButton = false }: MobileHeaderProps) => {
           {showBackButton && <BackButton />}
           <Link
             href='/'
-            className='text-xl font-bold text-green-600 tracking-tight hover:opacity-80 transition-opacity'
+            className='hover:opacity-80 transition-opacity'
           >
-            {siteName}
+            <SiteLogo className='h-8 w-auto' />
           </Link>
         </div>
 
