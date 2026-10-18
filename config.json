@@ -41,11 +41,5 @@
       "name": "IK",
       "api": "https://ikunzyapi.com/api.php/provide/vod/from/ikm3u8/"
     }
-  },
-  "iptv_sources": [
-    {
-      "name": "IPTV-org 中国",
-      "url": "https://iptv-org.github.io/iptv/countries/cn.m3u"
-    }
-  ]
+  }
 }

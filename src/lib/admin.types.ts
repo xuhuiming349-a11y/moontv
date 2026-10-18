@@ -49,12 +49,6 @@ export interface AdminConfig {
     from: 'config' | 'custom';
     disabled?: boolean;
   }[];
-  IptvSources: {
-    name: string;
-    url: string;
-    from: 'config' | 'custom';
-    disabled?: boolean;
-  }[];
   SubscriptionConfig?: {
     subscriptionUrl?: string;
     autoUpdate?: boolean;

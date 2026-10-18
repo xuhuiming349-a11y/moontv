@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clapperboard, Clover, Compass, Film, Home, LayoutGrid, Radio, Search, Tv } from 'lucide-react';
+import { Cat, Clapperboard, Clover, Compass, Film, Home, Search, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { memo, useEffect, useState } from 'react';
@@ -55,16 +55,6 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       icon: Clover,
       label: '综艺',
       href: '/douban?type=show',
-    },
-    {
-      icon: LayoutGrid,
-      label: '自定义',
-      href: '/douban?type=custom',
-    },
-    {
-      icon: Radio,
-      label: '直播',
-      href: '/live',
     },
   ]);
 
