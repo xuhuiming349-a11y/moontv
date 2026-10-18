@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig, mergeIptvSources } from '@/lib/config';
 import { getStorage } from '@/lib/db';
+import { DEFAULT_IPTV_SOURCES, getEffectiveIptvSources } from '@/lib/iptv';
 import { IStorage } from '@/lib/types';
 
 export const runtime = 'edge';
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
     }
     const adminConfig = await getConfig();
     mergeIptvSources(adminConfig);
-    return NextResponse.json(adminConfig.IptvSources || [], {
+    // 返回生效列表（含从未配置时的内置默认源），仅展示不落库
+    return NextResponse.json(getEffectiveIptvSources(adminConfig.IptvSources), {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
@@ -79,6 +81,13 @@ export async function POST(request: NextRequest) {
 
     if (!adminConfig.IptvSources) {
       adminConfig.IptvSources = [];
+    }
+
+    // 把内置默认源物化进配置（仅补充缺失项），使停用/启用等操作可作用于默认源
+    for (const def of DEFAULT_IPTV_SOURCES) {
+      if (!adminConfig.IptvSources.some((s) => s.url === def.url)) {
+        adminConfig.IptvSources.push({ ...def });
+      }
     }
 
     switch (action) {

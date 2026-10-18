@@ -3,7 +3,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
-import { fetchIptvChannels, groupChannels } from '@/lib/iptv';
+import {
+  fetchIptvChannels,
+  getEffectiveIptvSources,
+  groupChannels,
+} from '@/lib/iptv';
 
 export const runtime = 'edge';
 
@@ -22,9 +26,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const config = await getConfig();
-    const enabledSources = (config.IptvSources || []).filter(
-      (s) => !s.disabled
-    );
+    const enabledSources = getEffectiveIptvSources(
+      config.IptvSources
+    ).filter((s) => !s.disabled);
     const source = enabledSources[sourceIndex];
     if (!source) {
       return NextResponse.json({ error: '订阅源不存在' }, { status: 404 });

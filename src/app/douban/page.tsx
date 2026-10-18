@@ -335,7 +335,12 @@ function DoubanPageClient() {
           const json = await resp.json();
           const currentSnapshot = { ...currentParamsRef.current };
           if (isSnapshotEqual(requestSnapshot, currentSnapshot)) {
-            setCustomSearchResults(json.results || []);
+            const results: SearchResult[] = json.results || [];
+            // 按年份从新到旧排序，年份缺失的排最后
+            results.sort(
+              (a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0)
+            );
+            setCustomSearchResults(results);
             setDoubanData([]);
             setHasMore(false);
             setLoading(false);

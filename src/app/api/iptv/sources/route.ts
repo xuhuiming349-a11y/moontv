@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
+import { getEffectiveIptvSources } from '@/lib/iptv';
 
 export const runtime = 'edge';
 
@@ -12,7 +13,7 @@ export const runtime = 'edge';
 export async function GET() {
   try {
     const config = await getConfig();
-    const sources = (config.IptvSources || [])
+    const sources = getEffectiveIptvSources(config.IptvSources)
       .map((s, index) => ({
         index,
         name: s.name,

@@ -7,6 +7,36 @@ export interface IptvChannel {
   url: string;
 }
 
+export interface IptvSourceEntry {
+  name: string;
+  url: string;
+  from: 'config' | 'custom';
+  disabled?: boolean;
+}
+
+/**
+ * 内置默认订阅源：当用户从未配置过任何直播源时生效，
+ * 不依赖 config.json 合并逻辑，任何存储模式下都可用。
+ */
+export const DEFAULT_IPTV_SOURCES: IptvSourceEntry[] = [
+  {
+    name: 'IPTV-org 中国',
+    url: 'https://iptv-org.github.io/iptv/countries/cn.m3u',
+    from: 'config',
+  },
+];
+
+/**
+ * 计算实际生效的订阅源列表。
+ * 用户配置过（哪怕全部停用）就尊重用户配置；从未配置过则用内置默认源。
+ */
+export function getEffectiveIptvSources(
+  configured?: IptvSourceEntry[]
+): IptvSourceEntry[] {
+  if (configured && configured.length > 0) return configured;
+  return DEFAULT_IPTV_SOURCES.map((s) => ({ ...s }));
+}
+
 /**
  * 解析 M3U / M3U8 播放列表文本，提取频道列表。
  * 支持 #EXTINF 行中的 tvg-logo / group-title 属性。
