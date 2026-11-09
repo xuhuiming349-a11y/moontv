@@ -43,12 +43,22 @@ interface EpisodeSelectorProps {
   /** 预计算的测速结果，避免重复测速 */
   precomputedVideoInfo?: Map<string, VideoInfo>;
   /** 优选播放源相关 */
-  preferBestSource?: (sources: SearchResult[], isCancelled?: () => boolean) => Promise<SearchResult>;
+  preferBestSource?: (
+    sources: SearchResult[],
+    isCancelled?: () => boolean
+  ) => Promise<SearchResult>;
   setLoading: (loading: boolean) => void;
   /** 设置视频是否正在加载中的状态 */
   setIsVideoLoading: (loading: boolean) => void;
   /** 设置视频加载阶段的状态 */
-  setVideoLoadingStage: (stage: 'initing' | 'sourceChanging' | 'optimizing') => void;
+  setVideoLoadingStage: (
+    stage: 'initing' | 'sourceChanging' | 'optimizing'
+  ) => void;
+  /**
+   * 共同观影室内容。传入后在「换源」右侧显示「一起看」分段；
+   * 不传时组件行为与上游完全一致（其他调用方不受影响）。
+   */
+  watchRoomSlot?: React.ReactNode;
 }
 
 /**
@@ -70,8 +80,9 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
   precomputedVideoInfo,
   preferBestSource,
   setLoading,
-  setIsVideoLoading,
-  setVideoLoadingStage
+  setIsVideoLoading: _setIsVideoLoading,
+  setVideoLoadingStage: _setVideoLoadingStage,
+  watchRoomSlot,
 }) => {
   const router = useRouter();
   const pageCount = Math.ceil(totalEpisodes / episodesPerPage);
@@ -97,11 +108,24 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
     videoInfoMapRef.current = videoInfoMap;
   }, [videoInfoMap]);
 
-  // 主要的 tab 状态：'episodes' 或 'sources'
+  // 主要的 tab 状态：'episodes' / 'sources' / 'watchroom'
   // 当只有一集时默认展示 "换源"，并隐藏 "选集" 标签
-  const [activeTab, setActiveTab] = useState<'episodes' | 'sources'>(
-    totalEpisodes > 1 ? 'episodes' : 'sources'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'episodes' | 'sources' | 'watchroom'
+  >(totalEpisodes > 1 ? 'episodes' : 'sources');
+
+  // 邀请链接（URL 带 ?room=）打开时自动落到「一起看」Tab。
+  // 用 effect 而非 useState 初始化，避免 SSR / hydration 时两端计算不一致；
+  // 用 ref 保证只判一次——slot 是 React element，每次 render 引用都会变，
+  // 否则会把用户手动切走的 Tab 反复拉回来。
+  const autoSwitchedRef = useRef(false);
+  useEffect(() => {
+    if (!watchRoomSlot || autoSwitchedRef.current) return;
+    autoSwitchedRef.current = true;
+    if (typeof window === 'undefined') return;
+    if (!new URLSearchParams(window.location.search).has('room')) return;
+    setActiveTab('watchroom');
+  }, [watchRoomSlot]);
 
   // 当前分页索引（0 开始）
   const initialPage = Math.floor((value - 1) / episodesPerPage);
@@ -325,95 +349,118 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
     totalEpisodes
   );
 
+  // 分段控件式 Tab 样式：选中态为白色胶囊，未选中态保持透明
+  const tabClass = (active: boolean) =>
+    `flex-1 cursor-pointer rounded-lg py-2 text-center text-sm font-medium transition-all duration-200 ${
+      active
+        ? 'bg-white text-green-600 shadow-sm dark:bg-white/15 dark:text-green-400'
+        : 'text-gray-600 hover:text-green-600 dark:text-gray-300 dark:hover:text-green-400'
+    }`;
+
   return (
-    <div className='px-4 py-0 h-full bg-black/10 dark:bg-white/5 flex flex-col overflow-hidden'>
-      {/* 主要的 Tab 切换 - 无缝融入设计 */}
-      <div className='flex mb-1 -mx-6 flex-shrink-0'>
+    <div className='flex h-full flex-col overflow-hidden bg-black/[0.03] px-3 py-3 dark:bg-white/[0.04]'>
+      {/* 主要的 Tab 切换 - 分段控件 */}
+      <div className='mb-3 flex flex-shrink-0 gap-1 rounded-xl bg-black/5 p-1 dark:bg-white/10'>
         {totalEpisodes > 1 && (
           <div
             onClick={() => setActiveTab('episodes')}
-            className={`flex-1 py-3 px-6 text-center cursor-pointer transition-all duration-200 font-medium
-              ${
-                activeTab === 'episodes'
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-700 hover:text-green-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-green-400 hover:bg-black/3 dark:hover:bg-white/3'
-              }
-            `.trim()}
+            className={tabClass(activeTab === 'episodes')}
           >
             选集
           </div>
         )}
         <div
           onClick={handleSourceTabClick}
-          className={`flex-1 py-3 px-6 text-center cursor-pointer transition-all duration-200 font-medium flex items-center justify-center
-            ${
-              activeTab === 'sources'
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-gray-700 hover:text-green-600 bg-black/5 dark:bg-white/5 dark:text-gray-300 dark:hover:text-green-400 hover:bg-black/3 dark:hover:bg-white/3'
-            }
+          className={`${tabClass(
+            activeTab === 'sources'
+          )} flex items-center justify-center
           `.trim()}
         >
           <span>换源</span>
-          {preferBestSource && availableSources && availableSources.length > 0 && (
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isOptimizing) return; // 防止重复点击
-                if (!availableSources || availableSources.length === 0) return;
-                // 重置取消标志
-                cancelOptimizationRef.current = false;
-                setIsOptimizing(true);
-                preferBestSource(availableSources, () => cancelOptimizationRef.current)
-                  .then((bestSource) => {
-                    // 如果已取消，则忽略结果
-                    if (cancelOptimizationRef.current) return;
-                    // 确保bestSource有效
-                    if (bestSource && (bestSource.source !== currentSource || bestSource.id !== currentId)) {
-                      // 切换到最佳播放源
-                      handleSourceClick(bestSource);
-                    }
-                  })
-                  .catch((_err: Error) => {
-                    // 静默处理错误，因为已经有UI提示
-                  })
-                  .finally(() => {
-                    if (!cancelOptimizationRef.current) {
-                      setIsOptimizing(false);
-                      if (setLoading) setLoading(false);
-                    }
-                    // 重置取消标志
-                    cancelOptimizationRef.current = false;
-                  });
-              }}
-              className={`ml-2 bg-blue-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out ${
-                isOptimizing
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-blue-600 hover:scale-110 cursor-pointer'
-              }`}
-              title={isOptimizing ? '优选进行中...' : '优选播放源'}
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          {preferBestSource &&
+            availableSources &&
+            availableSources.length > 0 && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isOptimizing) return; // 防止重复点击
+                  if (!availableSources || availableSources.length === 0)
+                    return;
+                  // 重置取消标志
+                  cancelOptimizationRef.current = false;
+                  setIsOptimizing(true);
+                  preferBestSource(
+                    availableSources,
+                    () => cancelOptimizationRef.current
+                  )
+                    .then((bestSource) => {
+                      // 如果已取消，则忽略结果
+                      if (cancelOptimizationRef.current) return;
+                      // 确保bestSource有效
+                      if (
+                        bestSource &&
+                        (bestSource.source !== currentSource ||
+                          bestSource.id !== currentId)
+                      ) {
+                        // 切换到最佳播放源
+                        handleSourceClick(bestSource);
+                      }
+                    })
+                    .catch((_err: Error) => {
+                      // 静默处理错误，因为已经有UI提示
+                    })
+                    .finally(() => {
+                      if (!cancelOptimizationRef.current) {
+                        setIsOptimizing(false);
+                        if (setLoading) setLoading(false);
+                      }
+                      // 重置取消标志
+                      cancelOptimizationRef.current = false;
+                    });
+                }}
+                className={`ml-2 bg-blue-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all duration-300 ease-out ${
+                  isOptimizing
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-blue-600 hover:scale-110 cursor-pointer'
+                }`}
+                title={isOptimizing ? '优选进行中...' : '优选播放源'}
               >
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
-          )}
+                <svg
+                  className='w-3.5 h-3.5'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                >
+                  <path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z' />
+                </svg>
+              </div>
+            )}
         </div>
+        {watchRoomSlot && (
+          <div
+            onClick={() => setActiveTab('watchroom')}
+            className={`${tabClass(
+              activeTab === 'watchroom'
+            )} flex items-center justify-center gap-1 whitespace-nowrap`}
+            title='共同观影室'
+          >
+            <span>一起看</span>
+          </div>
+        )}
       </div>
 
       {/* 选集 Tab 内容 */}
       {activeTab === 'episodes' && (
         <>
           {/* 分类标签 */}
-          <div className='flex items-center gap-4 mb-4 border-b border-gray-300 dark:border-gray-700 -mx-6 px-6 flex-shrink-0'>
-            <div className='flex-1 overflow-x-auto scrollbar-hide' ref={categoryContainerRef}>
+          <div className='mb-2 flex flex-shrink-0 items-center gap-2 border-b border-black/5 pb-1 dark:border-white/10'>
+            <div
+              className='flex-1 overflow-x-auto scrollbar-hide'
+              ref={categoryContainerRef}
+            >
               <div className='flex gap-2 min-w-max'>
                 {categories.map((label, idx) => {
                   const isActive = idx === displayPage;
@@ -443,7 +490,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
             </div>
             {/* 向上/向下按钮 */}
             <button
-              className='flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-gray-700 hover:text-green-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-green-400 dark:hover:bg-white/20 transition-colors transform translate-y-[-4px]'
+              className='flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-black/5 hover:text-green-600 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-green-400'
               onClick={() => {
                 // 切换集数排序（正序/倒序）
                 setDescending((prev) => !prev);
@@ -466,8 +513,8 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
           </div>
 
           {/* 集数网格 */}
-          <div className='overflow-y-auto flex-1 pb-4 scrollbar-hide'>
-            <div className='grid grid-cols-3 sm:grid-cols-4 gap-3'>
+          <div className='scrollbar-hide flex-1 overflow-y-auto pb-1'>
+            <div className='grid grid-cols-3 gap-2 sm:grid-cols-4'>
               {(() => {
                 const len = currentEnd - currentStart + 1;
                 const episodes = Array.from({ length: len }, (_, i) =>
@@ -480,11 +527,11 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                   <button
                     key={episodeNumber}
                     onClick={() => handleEpisodeClick(episodeNumber - 1)}
-                    className={`h-9 px-1 py-1 flex items-center justify-center text-xs font-medium rounded transition-all duration-200 whitespace-nowrap font-mono
+                    className={`flex h-9 items-center justify-center whitespace-nowrap rounded-lg px-1 py-1 font-mono text-xs font-medium transition-all duration-200
                       ${
                         isActive
-                          ? 'bg-green-500 text-white shadow-lg shadow-green-500/25 dark:bg-green-600'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:scale-105 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20'
+                          ? 'bg-green-500 text-white shadow-sm shadow-green-500/25 dark:bg-green-600'
+                          : 'bg-black/5 text-gray-700 hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20'
                       }`.trim()}
                   >
                     {(() => {
@@ -509,7 +556,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
 
       {/* 换源 Tab 内容 */}
       {activeTab === 'sources' && (
-        <div className='flex flex-col h-full mt-4'>
+        <div className='flex h-full flex-col pt-1'>
           {sourceSearchLoading && (
             <div className='flex items-center justify-center py-8'>
               <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-green-500'></div>
@@ -567,7 +614,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
           {!sourceSearchLoading &&
             !sourceSearchError &&
             availableSources.length > 0 && (
-              <div className='flex-1 overflow-y-auto space-y-2 pb-20 scrollbar-hide'>
+              <div className='scrollbar-hide flex-1 space-y-1.5 overflow-y-auto pb-2'>
                 {availableSources
                   .sort((a, b) => {
                     const aIsCurrent =
@@ -710,7 +757,7 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                       </div>
                     );
                   })}
-                <div className='flex-shrink-0 mt-auto pt-2 border-t border-gray-400 dark:border-gray-700'>
+                <div className='mt-auto flex-shrink-0 border-t border-black/5 pt-2 dark:border-white/10'>
                   <button
                     onClick={() => {
                       if (videoTitle) {
@@ -726,6 +773,19 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                 </div>
               </div>
             )}
+        </div>
+      )}
+
+      {/* 共同观影室 Tab 内容：由播放页注入，组件本身不感知房间逻辑。
+          这里用 CSS 显隐而非条件挂载：即使停在「选集 / 换源」Tab，观影室
+          也必须保持挂载，否则带 ?room= 的邀请链接打开后不会自动入房、不会同步。 */}
+      {watchRoomSlot && (
+        <div
+          className={`min-h-0 flex-1 flex-col overflow-hidden ${
+            activeTab === 'watchroom' ? 'flex' : 'hidden'
+          }`}
+        >
+          {watchRoomSlot}
         </div>
       )}
     </div>
