@@ -5,14 +5,14 @@
  * 所有值以 1280px 视口为基准换算成 vw，让元素尺寸随屏幕连续变化。
  */
 :root {
-  --nav-h: 4.375vw;              /* 导航栏高度：56px @1280 → 84px @1920   */
-  --nav-px: 1.25vw;              /* 左右内边距：16px @1280 → 24px @1920   */
-  --nav-gap: 1.25vw;             /* 区块间距：16px @1280 → 24px @1920     */
-  --nav-link-gap: 0.78125vw;     /* 菜单项内间距：10px @1280 → 15px @1920  */
-  --nav-text: clamp(13px, 1.171875vw, 22.5px);   /* ★ 菜单字号带上下限   */
-  --nav-icon: clamp(15px, 1.40625vw, 27px);      /* ★ 图标带上下限      */
-  --nav-logo: clamp(18px, 1.875vw, 36px);        /* ★ Logo 带上下限      */
-  --nav-btn: clamp(30px, 2.5vw, 48px);           /* ★ 按钮带上下限      */
+  --nav-h: 4.375vw; /* 导航栏高度：56px @1280 → 84px @1920   */
+  --nav-px: 1.25vw; /* 左右内边距：16px @1280 → 24px @1920   */
+  --nav-gap: 1.25vw; /* 区块间距：16px @1280 → 24px @1920     */
+  --nav-link-gap: 0.78125vw; /* 菜单项内间距：10px @1280 → 15px @1920  */
+  --nav-text: clamp(13px, 1.171875vw, 22.5px); /* ★ 菜单字号带上下限   */
+  --nav-icon: clamp(15px, 1.40625vw, 27px); /* ★ 图标带上下限      */
+  --nav-logo: clamp(18px, 1.875vw, 36px); /* ★ Logo 带上下限      */
+  --nav-btn: clamp(30px, 2.5vw, 48px); /* ★ 按钮带上下限      */
 
   /* ★ 搜索栏：与视口等比缩放，clamp 保护下限 */
   --nav-search-w: clamp(210px, 21.875vw, 420px);
@@ -20,6 +20,9 @@
 
   /* ★ 源选择器固定宽度：恒定不随内容变化 */
   --nav-source-w: clamp(60px, calc(var(--nav-search-w) * 0.26), 104px);
+
+  /* ★ 左侧菜单横向滚动容器的最大宽度：超出部分隐藏并可滚动查看 */
+  --nav-menu-max-w: clamp(280px, 38vw, 700px);
 
   /* ★ 字号 = 宽度的 5%，两者同边界 clamp，字宽比恒定 */
   --nav-search-text: calc(var(--nav-search-w) * 0.05);
@@ -40,6 +43,7 @@
     --nav-search-h: 36px;
     --nav-source-w: 60px;
     --nav-search-text: 11px;
+    --nav-menu-max-w: 280px;
   }
 }
 
@@ -58,6 +62,7 @@
     --nav-search-h: 54px;
     --nav-source-w: 104px;
     --nav-search-text: 20px;
+    --nav-menu-max-w: 700px;
   }
 }
 
@@ -76,7 +81,7 @@
   font-weight: 700;
   line-height: 16px;
   text-align: center;
-  pointer-events: none;   /* ★ 不阻挡点击齿轮按钮 */
+  pointer-events: none; /* ★ 不阻挡点击齿轮按钮 */
   z-index: 10;
   box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.95);
 }
@@ -101,8 +106,8 @@
 .top-nav__search {
   width: var(--nav-search-w);
   flex-shrink: 0;
-  display: flex;                  /* ★ 正常文档流 */
-  align-items: stretch;           /* ★ 子项等高 */
+  display: flex; /* ★ 正常文档流 */
+  align-items: stretch; /* ★ 子项等高 */
   position: relative;
 }
 
@@ -111,14 +116,27 @@
   flex: 1 1 auto;
   height: var(--nav-search-h);
   font-size: var(--nav-search-text);
-  min-width: 0;                   /* ★ 允许收缩，防止 flex 子项溢出 */
-  padding-left: 32px !important;  /* ★ 固定值，只给放大镜图标留位 */
+  min-width: 0; /* ★ 允许收缩，防止 flex 子项溢出 */
+  padding-left: 32px !important; /* ★ 固定值，只给放大镜图标留位 */
   padding-right: 32px !important;
 }
 
 .top-nav__search-icon {
   width: var(--nav-icon);
   height: var(--nav-icon);
+}
+
+/* ★ 源选择器按钮（导航栏紧凑版）：与搜索框等高，随导航栏等比缩放 */
+.top-nav__source-btn {
+  height: var(--nav-search-h);
+  padding-left: calc(var(--nav-search-h) * 0.3333);
+  padding-right: calc(var(--nav-search-h) * 0.3333);
+  gap: calc(var(--nav-search-h) * 0.1111);
+}
+.top-nav__source-btn > svg {
+  width: var(--nav-icon);
+  height: var(--nav-icon);
+  flex-shrink: 0;
 }
 
 .top-nav__searchbox::placeholder {
@@ -163,7 +181,9 @@
 }
 
 /* 导航栏容器 */
-.top-nav { height: var(--nav-h); }
+.top-nav {
+  height: var(--nav-h);
+}
 .top-nav__inner {
   width: 100%;
   max-width: 100%;
@@ -172,7 +192,9 @@
   padding-left: var(--nav-px);
   padding-right: var(--nav-px);
 }
-.top-nav__menu { gap: var(--nav-link-gap); }
+.top-nav__menu {
+  gap: var(--nav-link-gap);
+}
 .top-nav__link {
   padding-left: var(--nav-link-gap);
   padding-right: var(--nav-link-gap);
@@ -203,8 +225,440 @@
   gap: calc(var(--nav-gap) * 0.6);
 }
 
+/* ============================================================
+ * ★ 导航左侧菜单横向滚动容器
+ * 固定最大宽度；超出部分隐藏并可横向滚动，左侧选项整体占宽受限，
+ * 不再挤压右侧搜索 / 功能按钮。
+ * ============================================================ */
+.top-nav__scroll-wrap {
+  position: relative;
+  min-width: 0;
+  /* 允许在 flex 行内收缩，但不允许被压缩到内容以下 */
+  flex: 0 1 auto;
+  width: max-content;
+  max-width: var(--nav-menu-max-w);
+  overflow: hidden;
+  /* 渐隐遮罩需要作为定位容器 */
+  isolation: isolate;
+}
+
+.top-nav__scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem; /* 与原 nav 的 gap-1 保持一致 */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* 菜单项强制单行、不被压缩 */
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  /* 拖拽时禁止选中文本 / 禁止浏览器处理手势 */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-x pan-y; /* 触屏横向交给本容器原生滚动，纵向仍可滚动页面 */
+  scrollbar-width: none;
+}
+
+.top-nav__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 空闲时可拖动的光标提示 */
+.top-nav__scroll-wrap:hover .top-nav__scroll {
+  cursor: grab;
+}
+
+/* 拖拽中：光标状态 + 屏蔽内部链接的点击/拖拽幽灵 */
+.top-nav__scroll-wrap:hover .top-nav__scroll.is-dragging,
+.top-nav__scroll.is-dragging {
+  cursor: grabbing !important;
+  scroll-behavior: auto; /* 拖拽时不要平滑滚动，否则手感粘滞 */
+}
+.top-nav__scroll.is-dragging > * {
+  pointer-events: none;
+}
+
+/* 内部所有菜单项：单行、不换行、不收缩 */
+.top-nav__scroll > * {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.top-nav__scroll nav,
+.top-nav__scroll nav > * {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 菜单项内的链接不再被浏览器当作可拖拽对象（避免拖出链接幽灵图并跳转） */
+.top-nav__scroll a {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 左右渐隐：用 mask 让内容自然淡出，避免覆盖一层色块（半透明导航下也不会色差） */
+.top-nav__scroll[data-fade-left='true'] {
+  --nav-fade-mask: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--nav-fade-size)
+  );
+  -webkit-mask-image: var(--nav-fade-mask);
+  mask-image: var(--nav-fade-mask);
+}
+.top-nav__scroll[data-fade-right='true'] {
+  --nav-fade-mask: linear-gradient(
+    to left,
+    transparent 0,
+    #000 var(--nav-fade-size)
+  );
+  -webkit-mask-image: var(--nav-fade-mask);
+  mask-image: var(--nav-fade-mask);
+}
+.top-nav__scroll[data-fade-left='true'][data-fade-right='true'] {
+  --nav-fade-mask: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--nav-fade-size),
+    #000 calc(100% - var(--nav-fade-size)),
+    transparent 100%
+  );
+  -webkit-mask-image: var(--nav-fade-mask);
+  mask-image: var(--nav-fade-mask);
+}
+.top-nav__scroll {
+  --nav-fade-size: 1.5rem;
+}
+
+/* 悬停时出现的滚动箭头按钮：轻量、无边框感，避免挡住菜单 */
+.top-nav__scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) scale(0.85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.72);
+  color: rgb(107 114 128);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease,
+    color 0.18s ease;
+  z-index: 3;
+}
+/* 只有存在溢出方向时才允许交互；悬停容器后淡入 */
+.top-nav__scroll-wrap:hover .top-nav__scroll-btn[data-visible='true'] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+.top-nav__scroll-btn:hover {
+  background: rgb(255 255 255 / 0.95);
+  color: rgb(22 163 74);
+}
+.top-nav__scroll-btn--left {
+  left: -0.125rem;
+}
+.top-nav__scroll-btn--right {
+  right: -0.125rem;
+}
+.dark .top-nav__scroll-btn {
+  background: rgb(31 41 55 / 0.72);
+  color: rgb(156 163 175);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+.dark .top-nav__scroll-btn:hover {
+  background: rgb(55 65 81 / 0.95);
+  color: rgb(74 222 128);
+}
+
+/* ============================================================
+ * ★ 长按拖动「调整菜单顺序」
+ * ============================================================ */
+
+/* 排序中：容器光标、禁用内部过渡干扰 */
+.top-nav__scroll.is-reordering {
+  cursor: grabbing !important;
+  /* 排序手势期间不要再让浏览器接管触摸滚动 */
+  touch-action: none;
+}
+
+/* ============================================================
+ * ★ 移动端底部导航：同样的横向滑动 + 长按拖动排序
+ * ============================================================ */
+.mobile-bottom-nav__list {
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mobile-bottom-nav__list a {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.mobile-bottom-nav__list.is-reordering {
+  touch-action: none;
+}
+.mobile-bottom-nav__list.is-reordering > * {
+  /* 排序期间禁止点击内部的链接，避免误跳转 */
+  pointer-events: none;
+}
+.mobile-bottom-nav__list .top-nav__reorder-source {
+  opacity: 0.3;
+  outline: 1px dashed rgb(34 197 94 / 0.75);
+  outline-offset: -2px;
+  border-radius: 0.75rem;
+}
+/* 底部导航的排序提示要挂在上方，否则会跑到屏幕外 */
+.mobile-bottom-nav .top-nav__reorder-tip {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+/* 移动端首次进入时的操作提示 */
+.mobile-bottom-nav .top-nav__scroll-hint {
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, 4px);
+}
+.mobile-bottom-nav .top-nav__scroll-hint.top-nav__hint-in {
+  animation: top-nav-hint-in-up 0.2s ease forwards;
+}
+@keyframes top-nav-hint-in-up {
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.top-nav__scroll.is-reordering > * > * {
+  /* 正在被拖动的项之外，其余项禁止响应点击 */
+  pointer-events: none;
+}
+
+/* 长按等待中：菜单项缩小 + 描边，配合进度环给出"正在拿起"的反馈 */
+.top-nav__longpress {
+  position: relative;
+  transform: scale(0.94);
+  transition: transform 0.12s ease;
+  z-index: 1;
+}
+/* 长按进度环：从空到满绘制完时正好进入排序模式 */
+.top-nav__longpress::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.5rem;
+  border: 2px solid transparent;
+  border-top-color: rgb(34 197 94);
+  border-right-color: rgb(34 197 94);
+  border-bottom-color: rgb(34 197 94);
+  animation: top-nav-longpress-ring 0.42s linear forwards;
+  pointer-events: none;
+}
+@keyframes top-nav-longpress-ring {
+  from {
+    opacity: 0.2;
+    transform: rotate(0deg);
+    border-color: rgb(34 197 94 / 0.35);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(360deg);
+    border-color: rgb(34 197 94);
+  }
+}
+
+/* 菜单项悬停时露出的"拖动把手"，暗示可以长按拿起 */
+.top-nav__drag-handle {
+  position: absolute;
+  display: inline-flex;
+  color: rgb(34 197 94);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+/* 悬停整条菜单栏时把手浮现（比只悬停单项更容易被注意到） */
+.top-nav__scroll-wrap:hover .top-nav__drag-handle {
+  opacity: 0.5;
+}
+/* 悬停到某个菜单项本身时把手更明显 */
+.top-nav__scroll-wrap:hover
+  .top-nav__link--sortable:hover
+  .top-nav__drag-handle {
+  opacity: 1;
+}
+.top-nav__scroll.is-reordering .top-nav__drag-handle,
+.top-nav__scroll.is-dragging .top-nav__drag-handle {
+  opacity: 0 !important;
+}
+.dark .top-nav__drag-handle {
+  color: rgb(74 222 128);
+}
+/* 移动端底部导航：长按提示用的把手常显（触屏没有 hover） */
+.mobile-bottom-nav .top-nav__drag-handle {
+  position: absolute;
+  opacity: 0.4;
+}
+.mobile-bottom-nav
+  .mobile-bottom-nav__list.is-reordering
+  .top-nav__drag-handle {
+  opacity: 0;
+}
+
+/* 被拿起的原始项：留在原位当占位符（保持布局不塌陷） */
+.top-nav__scroll .top-nav__reorder-source {
+  opacity: 0.35;
+  outline: 1px dashed rgb(34 197 94 / 0.7);
+  outline-offset: -2px;
+  border-radius: 0.5rem;
+}
+
+/* 跟随指针的浮动幽灵 */
+.top-nav__reorder-ghost {
+  position: fixed !important;
+  z-index: 9999;
+  pointer-events: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 0.05s linear;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 0.98);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18), 0 0 0 1px rgb(34 197 94 / 0.35);
+  backdrop-filter: blur(8px);
+}
+.dark .top-nav__reorder-ghost {
+  background: rgb(31 41 55 / 0.98);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(74 222 128 / 0.35);
+}
+
+/* 排序期间禁止选中文本和指针手势干扰 */
+html.top-nav__is-reordering,
+html.top-nav__is-reordering body {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 首次溢出的操作提示气泡 */
+.top-nav__scroll-hint {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: rgb(17 24 39 / 0.9);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  animation: top-nav-hint-in 0.2s ease forwards;
+  z-index: 9998;
+}
+@keyframes top-nav-hint-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 排序进行中的状态提示 */
+.top-nav__reorder-tip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background: rgb(34 197 94 / 0.95);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9998;
+  box-shadow: 0 4px 12px rgb(34 197 94 / 0.35);
+}
+/* 长按等待中：用更柔和的深色提示，与"已进入排序"区分开 */
+.top-nav__reorder-tip--pressing {
+  background: rgb(17 24 39 / 0.92);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  animation: top-nav-tip-pop 0.16s ease-out;
+}
+.dark .top-nav__reorder-tip--pressing {
+  background: rgb(55 65 81 / 0.96);
+}
+@keyframes top-nav-tip-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -2px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* 提示气泡里的"知道了"按钮 */
+.top-nav__scroll-hint-close {
+  margin-left: 0.375rem;
+  padding: 0 0.375rem;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  border-radius: 0.25rem;
+  background: transparent;
+  color: rgb(255 255 255 / 0.85);
+  font-size: 10px;
+  line-height: 1.5;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.top-nav__scroll-hint-close:hover {
+  background: rgb(255 255 255 / 0.15);
+  color: #fff;
+}
+.top-nav__scroll-hint b {
+  color: rgb(74 222 128);
+  font-weight: 600;
+}
+
+/* 无障碍：偏好减少动效时关闭平滑滚动 */
+@media (prefers-reduced-motion: reduce) {
+  .top-nav__scroll {
+    scroll-behavior: auto;
+  }
+  .top-nav__reorder-ghost {
+    transition: none;
+  }
+}
+
 @media (max-width: 1023px) {
-  .top-nav__text { display: none; }
+  .top-nav__text {
+    display: none;
+  }
   .top-nav__link {
     min-width: 36px;
     min-height: 36px;
@@ -212,55 +666,130 @@
   }
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow-x: hidden;
   overscroll-behavior: none;
 }
-body { color: rgb(var(--foreground-rgb)); }
+body {
+  color: rgb(var(--foreground-rgb));
+}
 html:not(.dark) body {
   background: linear-gradient(
     180deg,
-    #e6f3fb 0%, #eaf3f7 18%, #f7f7f3 38%,
-    #e9ecef 60%, #dbe3ea 80%, #d3dde6 100%
+    #e6f3fb 0%,
+    #eaf3f7 18%,
+    #f7f7f3 38%,
+    #e9ecef 60%,
+    #dbe3ea 80%,
+    #d3dde6 100%
   );
   background-attachment: fixed;
 }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(31, 41, 55, 0.1); }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.1);
+}
 ::-webkit-scrollbar-thumb {
   background: rgba(75, 85, 99, 0.3);
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.5); }
-.video-card-hover { transition: transform 0.3s ease; }
-.video-card-hover:hover { transform: scale(1.05); }
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.5);
+}
+.video-card-hover {
+  transition: transform 0.3s ease;
+}
+.video-card-hover:hover {
+  transform: scale(1.05);
+}
 .gradient-overlay {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
 }
 @media (max-width: 767px) {
-  html, body { scrollbar-width: none; }
-  html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+  html,
+  body {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  }
 }
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 0.6s;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   animation-fill-mode: both;
 }
-::view-transition-old(root) { animation-name: fade-out; }
-::view-transition-new(root) { animation-name: fade-in; }
+::view-transition-old(root) {
+  animation-name: fade-out;
+}
+::view-transition-new(root) {
+  animation-name: fade-in;
+}
 div[data-media-provider] video {
   height: 100%;
   object-fit: contain;
+}
+/* 移动端长按视频会触发浏览器原生长按菜单（复制视频帧 / 画中画），由手势逻辑接管 */
+.art-video-player video {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .art-poster {
   background-size: contain !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
   background-color: #000 !important;
+}
+.art-video-player .art-settings {
+  max-width: calc(100% - 2 * var(--art-padding, 10px));
+}
+.art-video-player .art-settings .art-setting-item {
+  gap: 12px;
+  min-height: var(--art-settings-item-height, 35px);
+  height: auto !important;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.art-video-player .art-settings .art-setting-item-right {
+  min-width: 0;
+}
+.art-video-player .art-settings .art-setting-item-right-tooltip {
+  min-width: 0;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  text-align: right;
+  line-height: 1.4;
+}
+.art-video-player .art-settings .art-setting-item-right-icon {
+  flex-shrink: 0;
 }
 .art-video-player .moontv-play-header {
   transition: opacity 0.2s ease, visibility 0.2s ease;
@@ -272,6 +801,14 @@ div[data-media-provider] video {
   visibility: hidden;
   pointer-events: none !important;
 }
+.art-video-player .moontv-progress-preview {
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.art-video-player.art-hide-cursor .moontv-progress-preview,
+.art-video-player.art-lock .moontv-progress-preview {
+  opacity: 0;
+  visibility: hidden;
+}
 .art-video-player:fullscreen .moontv-player-modal > div,
 .art-video-player:-webkit-full-screen .moontv-player-modal > div,
 .art-video-player.art-fullscreen-web .moontv-player-modal > div,
@@ -281,5 +818,129 @@ div[data-media-provider] video {
 @media (max-width: 768px) {
   .art-control-pip,
   .art-control-fullscreenWeb,
-  .art-control-volume { display: none !important; }
+  .art-control-volume {
+    display: none !important;
+  }
+}
+
+/* 播放器内置文字提示（notice）：固定到画面左下角，替代默认的顶部居中提示条 */
+.art-video-player .art-notice.art-notice {
+  inset: auto auto calc(var(--art-padding) + 4px) var(--art-padding);
+  width: auto;
+  max-width: calc(100% - var(--art-padding) * 2);
+  padding: 0;
+  justify-content: flex-start;
+  transition: bottom 0.2s ease;
+}
+
+/* 控制栏显示 / 悬停时抬高一点，避免提示被进度条和按钮遮挡 */
+.art-video-player.art-control-show .art-notice.art-notice,
+.art-video-player.art-hover .art-notice.art-notice {
+  bottom: calc(var(--art-control-height) + 12px);
+}
+
+/* 自定义堆叠提示：右上角，新提示在最上方；内置 notice 仍在左下角 */
+.art-video-player .moontv-notice-stack {
+  position: absolute;
+  z-index: 80;
+  top: calc(var(--art-padding) + 4px);
+  right: var(--art-padding);
+  display: flex;
+  /* column-reverse：DOM 末尾的最新一条显示在最上方 */
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: calc(100% - var(--art-padding) * 2);
+  pointer-events: none;
+}
+
+.art-video-player .moontv-notice-stack .moontv-notice-item {
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: var(--art-border-radius);
+  background-color: var(--art-tip-background);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: break-word;
+  animation: moontv-notice-in 0.16s ease-out;
+}
+
+@keyframes moontv-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 移动端手势反馈：亮度遮罩盖在视频上，不挡住字幕 / 弹幕 / 控制栏 */
+.art-video-player .moontv-gesture-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  background-color: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s linear;
+}
+
+/* 手势 HUD：音量 / 亮度 / 双击快进，仿系统音量浮层的顶部横向滑杆 */
+.art-video-player .moontv-gesture-hud {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--art-padding) + 10px);
+  z-index: 90;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(70%, 240px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+
+.art-video-player .moontv-gesture-hud.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.art-video-player .moontv-gesture-hud-text {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.art-video-player .moontv-gesture-hud-track {
+  width: 100px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+.art-video-player .moontv-gesture-hud-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background-color: #fff;
+  /* 手势滑杆必须实时跟手，不能加过渡，否则会始终落后于手指 */
+  transition: none;
+  will-change: width;
 }
